@@ -2,6 +2,7 @@
 from pages.budgets import BudgetsPage
 from pages.dashboard import DashboardPage
 from pages.goals import GoalsPage
+from pages.reports import ReportsPage
 from pages.transactions import TransactionsPage
 
 REGISTRY = [
@@ -9,4 +10,5 @@ REGISTRY = [
     ("transactions", "Transactions", "⇅", TransactionsPage),
     ("budgets", "Budgets", "◔", BudgetsPage),
     ("goals", "Goals", "★", GoalsPage),
+    ("reports", "Reports", "▤", ReportsPage),
 ]
