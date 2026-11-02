@@ -19,7 +19,14 @@ locally, no internet or third-party packages needed.
 
 Keyboard shortcuts: `Ctrl+N` new transaction, `Ctrl+1..5` switch screen, `Ctrl+E` export, `Ctrl+T` theme, `F5` refresh, `Ctrl+Q` quit.
 
-## Run it
+## Web edition (Vercel)
+
+Tkinter is a desktop toolkit and cannot run on Vercel, so the repo also contains `public/index.html`,
+a dependency-free web version of the same planner (same five screens, dark mode, CSV export, data
+saved in the browser's localStorage). `vercel.json` points Vercel at the `public/` folder.
+The graded project is the Tkinter app; the web edition is a live demo of the same design.
+
+## Run it (desktop app)
 
 ```bash
 python main.py
