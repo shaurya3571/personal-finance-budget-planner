@@ -61,11 +61,12 @@ def apply_style(root: tk.Tk):
 
     for name, bg, fg, hover in (
         ("Primary.TButton", C["primary"], C["on_primary"], C["primary_hover"]),
-        ("Ghost.TButton", C["surface"], C["text"], C["row_alt"]),
+        ("Ghost.TButton", C["row_alt"], C["text"], C["track"]),
         ("Danger.TButton", C["surface"], C["expense"], C["danger_bg"]),
     ):
+        edge = bg if name == "Primary.TButton" else C["border"]
         style.configure(name, background=bg, foreground=fg, font=F(10, "bold"), padding=(14, 8),
-                        borderwidth=1 if name != "Primary.TButton" else 0, bordercolor=C["border"],
+                        borderwidth=1, bordercolor=edge, lightcolor=edge, darkcolor=edge,
                         focuscolor=bg, relief="flat")
         style.map(name, background=[("active", hover), ("pressed", hover)])
 
