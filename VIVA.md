@@ -23,9 +23,15 @@ tested on its own.
 13. **What happens when the user closes the window?** `protocol("WM_DELETE_WINDOW", on_close)` asks for confirmation, closes the DB, then destroys the window.
 14. **How is the projected month-end spend computed?** Spent so far divided by days elapsed, times days in the month (`projected_spend`).
 15. **How did you test it?** Unit tests for helpers, database and CSV export, plus headless GUI tests that drive the real widgets (add/edit/delete, both themes, empty database).
-16. **Limitations / future work.** Single user, no login, no recurring transactions, no multi-currency conversion, no cloud sync.
+16. **How does login work?** `AuthService.login` looks the user up, hashes the typed password with the stored salt and compares in constant time (`hmac.compare_digest`). On success `App.enter_app(user)` sets `db.uid`, builds the main window and every query is then filtered by that user id.
+17. **How are passwords stored?** Only as `pbkdf2_sha256$iterations$salt$hash`. A random 16-byte salt per user stops rainbow-table and same-password matching; 600,000 iterations make brute force slow. Passwords are not recoverable, only resettable.
+18. **What is the rate limiting?** 5 failed logins for a username -> 60-second lock (`MAX_ATTEMPTS`, `LOCKOUT_SECONDS`). Counters live in the `login_attempts` table, so restarting the app does not bypass them. Unknown usernames are counted too and get the same message, so an attacker cannot learn which users exist.
+19. **JDBC vs Python?** Same idea, different names: `DriverManager.getConnection` -> `sqlite3.connect`; `PreparedStatement` with `?` -> `conn.execute(sql, params)`; `ResultSet` -> cursor rows (`sqlite3.Row`); `commit()`/`rollback()` -> `with conn:`; `Connection.close()` -> `conn.close()`.
+20. **How do you stop one user reading another's data?** Every data table has `user_id`; every SELECT/UPDATE/DELETE includes `AND user_id = ?`. A unit test logs in as two users and checks isolation.
+21. **What happens to data created before accounts?** `_migrate` adds the `user_id` column (default 0); when the first account registers, `adopt_legacy` assigns those rows to it.
+22. **Limitations / future work.** Single user, no login, no recurring transactions, no multi-currency conversion, no cloud sync.
 
 ## Demo order (3 minutes)
-1. Data -> Load demo data. 2. Dashboard: point at cards, charts, budget bars. 3. Add a transaction
+0. Create an account (show the validation message, then a wrong-password lockout). 1. Data -> Load demo data. 2. Dashboard: point at cards, charts, budget bars. 3. Add a transaction
 (show validation error first). 4. Budgets: push one over the limit. 5. Goals: Add funds. 6. Reports:
 export CSV. 7. Toggle dark mode (`Ctrl+T`), quit (shows confirmation).

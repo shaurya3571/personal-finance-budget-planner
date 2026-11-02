@@ -15,6 +15,7 @@ locally, no internet or third-party packages needed.
 | **Budgets** | Monthly limit per category, progress bars that turn amber at 80% and red when exceeded, "over by" / "left" messages |
 | **Goals** | Savings goals with progress, deadline countdown, suggested monthly saving and an Add-funds dialog |
 | **Reports** | Top category, biggest expense, average daily spend, projected month-end spend, breakdown vs budget, **CSV export** |
+| **Accounts** | Sign-in / create-account screen, salted password hashing, per-user data, sign-out, login lockout after repeated wrong passwords |
 | **App-wide** | Month navigator, light/dark theme (remembered), menu bar, keyboard shortcuts, quit confirmation, demo data loader |
 
 Keyboard shortcuts: `Ctrl+N` new transaction, `Ctrl+1..5` switch screen, `Ctrl+E` export, `Ctrl+T` theme, `F5` refresh, `Ctrl+Q` quit.
@@ -33,7 +34,7 @@ python main.py
 ```
 
 Requires Python 3.10+ with Tkinter (included with the python.org installers for Windows/macOS;
-on Ubuntu/Debian: `sudo apt install python3-tk`). The first launch is empty - use
+on Ubuntu/Debian: `sudo apt install python3-tk`). On first launch choose **Create an account**, then use
 **Data -> Load demo data** to see the app with sample records.
 
 ## Project structure
@@ -41,7 +42,9 @@ on Ubuntu/Debian: `sudo apt install python3-tk`). The first launch is empty - us
 ```
 main.py            entry point
 app.py             main window: sidebar, month selector, menu, shortcuts, theme switching
-db.py              SQLite data layer (transactions, budgets, goals, settings, demo data)
+auth.py            password hashing, validation, login rate limiting (AuthService)
+login.py           sign-in / create-account screen
+db.py              SQLite data layer (users, transactions, budgets, goals, settings, demo data)
 services.py        pure helpers: money formatting, validation, month maths, budget status
 exporter.py        CSV export
 theme.py           colour palettes, fonts, ttk styling (light + dark)
@@ -58,6 +61,19 @@ Main window, title and geometry (`App(tk.Tk)`) - Labels, Entry and Buttons with 
 to functions - message boxes (`showerror`, `askyesno`) - keyboard shortcuts (`bind_all`) - handling
 window closure (`WM_DELETE_WINDOW`) - application menus (`tk.Menu`). Beyond the course it also uses
 `ttk` themed widgets and styles, `Treeview`, `Combobox` and custom `Canvas` drawing for the charts.
+
+## Accounts, database and security
+
+* **Database connection:** `sqlite3` (Python's DB-API 2.0, the counterpart of JDBC). `sqlite3.connect()` ~
+  `DriverManager.getConnection()`, `conn.execute()` ~ `PreparedStatement` with `?` placeholders,
+  `with conn:` ~ a transaction that commits or rolls back, `row_factory` ~ `ResultSet` access by column name.
+* **Per-user data:** every table row has a `user_id`; every query filters on it, so accounts are isolated.
+  Databases created before accounts existed are upgraded automatically and adopted by the first user.
+* **Passwords:** never stored - only a random-salted PBKDF2-HMAC-SHA256 hash (600,000 iterations),
+  compared in constant time.
+* **Rate limiting:** 5 wrong passwords lock that username for 60 seconds. The counter is stored in the
+  database, so closing and reopening the app does not reset it. Error messages are generic so usernames
+  cannot be guessed.
 
 ## Tests
 
