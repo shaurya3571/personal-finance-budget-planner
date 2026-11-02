@@ -171,7 +171,8 @@ class ScrollFrame(tk.Frame):
         self.canvas.bind("<Leave>", lambda e: self._unbind_wheel())
 
     def _bind_wheel(self):
-        self.canvas.bind_all("<MouseWheel>", lambda e: self.canvas.yview_scroll(int(-e.delta / 120), "units"))
+        # only the sign of delta matters: Windows reports +-120 per notch, macOS reports small values
+        self.canvas.bind_all("<MouseWheel>", lambda e: self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"))
         self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))
         self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))
 
