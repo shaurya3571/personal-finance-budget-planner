@@ -67,7 +67,7 @@ class ProgressBar(tk.Canvas):
 class BarChart(tk.Canvas):
     """Grouped income/expense bars per month."""
 
-    def __init__(self, parent, height=230):
+    def __init__(self, parent, height=170):
         super().__init__(parent, height=height, bg=C["surface"], highlightthickness=0)
         self.data = []
         self.bind("<Configure>", lambda e: self._draw())
@@ -112,7 +112,7 @@ class BarChart(tk.Canvas):
 class DonutChart(tk.Canvas):
     """Category spending donut with a legend."""
 
-    def __init__(self, parent, height=230):
+    def __init__(self, parent, height=170):
         super().__init__(parent, height=height, bg=C["surface"], highlightthickness=0)
         self.items, self.center_text = [], ""
         self.bind("<Configure>", lambda e: self._draw())
