@@ -97,6 +97,8 @@ class BarChart(tk.Canvas):
             cx = left + slot * (idx + 0.5)
             for off, value, color in ((-bar_w / 2 - 2, inc, C["income"]), (bar_w / 2 + 2, exp, C["expense"])):
                 bar_h = plot_h * value / top_value
+                if bar_h < 1:
+                    continue
                 self.create_rectangle(cx + off - bar_w / 2, top + plot_h - bar_h,
                                       cx + off + bar_w / 2, top + plot_h, fill=color, outline=color)
             self.create_text(cx, h - bottom + 16, text=month_label(ym, short=True),
