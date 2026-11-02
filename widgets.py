@@ -17,7 +17,7 @@ class Card(tk.Frame):
 
     def __init__(self, parent, padding=18, **kw):
         super().__init__(parent, bg=C["surface"], highlightthickness=1,
-                         highlightbackground=C["border"], **kw)
+                         highlightbackground=C["border"], highlightcolor=C["border"], **kw)
         self.body = tk.Frame(self, bg=C["surface"])
         self.body.pack(fill="both", expand=True, padx=padding, pady=padding)
 
