@@ -14,7 +14,7 @@ tested on its own.
 4. **Which layout managers did you use?** `grid` for card layouts (weights make columns resize), `pack` for rows and forms, `place` to stack the pages on top of each other and raise the active one.
 5. **How does navigation work?** All pages are created once and stacked with `place`; `show(key)` calls `tkraise()` and `refresh()`.
 6. **How does the month selector update everything?** `App.month` holds `YYYY-MM`; changing it calls `refresh()` on the visible page, which re-queries the database for that month.
-7. **How are the charts drawn without matplotlib?** `Canvas` primitives: rectangles for bars, thick `arc`s for the donut, lines and text for axes. They redraw on `<Configure>` so they resize with the window.
+7. **How are the charts drawn without matplotlib?** `Canvas` primitives: rectangles for bars and heatmap cells, thick `arc`s for the donut and rings, polylines for the line chart, text for axes. Each chart is a `tk.Canvas` subclass in `widgets.py` that redraws on `<Configure>`, so it resizes with the window. The numbers behind them (daily totals, running totals, weekday totals) are pure functions in `services.py` with unit tests.
 8. **How is input validated?** `parse_amount` and `parse_date` in `services.py` raise `ValueError` with a friendly message; the page shows it with `messagebox.showerror` and nothing is saved.
 9. **SQL injection?** All queries use `?` placeholders, never string-formatted user input.
 10. **How does the budget colour logic work?** `budget_status`: below 80% green, 80-100% amber, above 100% red.

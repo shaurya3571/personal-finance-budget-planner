@@ -11,13 +11,14 @@ locally, no internet or third-party packages needed.
 | Screen | What it does |
 |---|---|
 | **Dashboard** | Net balance, monthly income / expenses / savings rate (with change vs last month), 6-month income-vs-expense bar chart, category donut chart, recent transactions, budget status |
+| **Analytics** | Spending pace line chart (this month vs last), savings-rate and budget-used rings, spending calendar heatmap, spending by weekday, top categories, net savings by month |
 | **Transactions** | Add / edit / delete with validation, live search, filter by type and category, "this month only" checkbox, coloured rows |
 | **Budgets** | Monthly limit per category, progress bars that turn amber at 80% and red when exceeded, "over by" / "left" messages |
 | **Goals** | Savings goals with progress, deadline countdown, suggested monthly saving and an Add-funds dialog |
 | **Reports** | Top category, biggest expense, average daily spend, projected month-end spend, breakdown vs budget, **CSV export** |
 | **App-wide** | Month navigator, light/dark theme (remembered), menu bar, keyboard shortcuts, quit confirmation, demo data loader |
 
-Keyboard shortcuts: `Ctrl+N` new transaction, `Ctrl+1..5` switch screen, `Ctrl+E` export, `Ctrl+T` theme, `F5` refresh, `Ctrl+Q` quit.
+Keyboard shortcuts: `Ctrl+N` new transaction, `Ctrl+1..6` switch screen, `Ctrl+E` export, `Ctrl+T` theme, `F5` refresh, `Ctrl+Q` quit.
 
 ## Web edition (Vercel)
 
@@ -44,9 +45,10 @@ app.py             main window: sidebar, month selector, menu, shortcuts, theme 
 db.py              SQLite data layer (transactions, budgets, goals, settings, demo data)
 services.py        pure helpers: money formatting, validation, month maths, budget status
 exporter.py        CSV export
-theme.py           colour palettes, fonts, ttk styling (light + dark)
-widgets.py         Card, StatCard, ProgressBar, BarChart, DonutChart, ScrollFrame
-pages/             one class per screen (dashboard, transactions, budgets, goals, reports)
+theme.py           colour palettes, three-font system (serif headings, sans text, monospace figures), ttk styling
+widgets.py         Card, StatCard, ProgressBar, BarChart, DonutChart, LineChart, ColumnChart, HBarChart,
+                   CalendarHeatmap, RingGauge, ScrollFrame
+pages/             one class per screen (dashboard, analytics, transactions, budgets, goals, reports)
 tests/             unit tests (data layer, helpers, export) + headless GUI smoke tests
 screenshots/       images used in this README
 ```
@@ -68,11 +70,13 @@ xvfb-run -a python -m unittest discover -s tests   # headless Linux
 
 ## Screenshots
 
-| Transactions | Budgets |
+| Analytics | Transactions |
 |---|---|
-| ![](screenshots/transactions.png) | ![](screenshots/budgets.png) |
-| **Goals** | **Reports** |
-| ![](screenshots/goals.png) | ![](screenshots/reports.png) |
+| ![](screenshots/analytics.png) | ![](screenshots/transactions.png) |
+| **Budgets** | **Goals** |
+| ![](screenshots/budgets.png) | ![](screenshots/goals.png) |
+| **Reports** | |
+| ![](screenshots/reports.png) | |
 
 Dark mode:
 
