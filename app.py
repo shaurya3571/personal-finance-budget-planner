@@ -3,9 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 import theme
-from auth import AuthService
 from db import Database
-from login import LoginView
 from pages import REGISTRY
 from services import current_month, fmt_money, month_label, shift_month
 from theme import C, F
@@ -13,12 +11,9 @@ from widgets import label
 
 
 class App(tk.Tk):
-    def __init__(self, db=None, user=None):
-        """`user` skips the login screen (used by tests and screenshot tools)."""
+    def __init__(self, db=None):
         super().__init__()
         self.db = db or Database()
-        self.auth = AuthService(self.db)
-        self.user = None
         theme.pick_font_family(self)
         theme.set_mode(self.db.get_setting("theme", "light"))
         self.title("Personal Finance & Budget Planner")
@@ -26,36 +21,11 @@ class App(tk.Tk):
         self.minsize(1100, 760)
         self.month = current_month()
         self.pages, self.nav_items, self.current = {}, {}, None
-        self.bind_shortcuts()
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-        if user:
-            self.enter_app(user)
-        else:
-            self.show_login()
-
-    # ---- login / logout --------------------------------------------------
-    def show_login(self):
-        self.user, self.current = None, None
-        self.db.set_user(0)
-        for child in self.winfo_children():
-            child.destroy()
-        self.config(menu=tk.Menu(self))          # no menu bar until someone is signed in
-        theme.apply_style(self)
-        self.title("FinTrack - Sign in")
-        LoginView(self, self.auth, self.enter_app).pack(fill="both", expand=True)
-
-    def enter_app(self, user):
-        self.user = user
-        self.db.set_user(user["id"])
-        self.month = current_month()
-        self.title(f"Personal Finance & Budget Planner - {user['username']}")
         self.build_ui()
         self.build_menu()
+        self.bind_shortcuts()
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.show(REGISTRY[0][0] if REGISTRY else None)
-
-    def logout(self):
-        if messagebox.askyesno("Sign out", "Sign out of your account?", parent=self):
-            self.show_login()
 
     # ---- helpers shared by pages --------------------------------------
     def money(self, value, decimals=0):
@@ -100,15 +70,6 @@ class App(tk.Tk):
                           font=F(10), fg=C["sidebar_text"], bg=C["sidebar"], padx=18, pady=9, cursor="hand2")
         toggle.pack(fill="x")
         toggle.bind("<Button-1>", lambda e: self.toggle_theme())
-        signout = tk.Label(self.sidebar_footer, text="⎋  Sign out", anchor="w", font=F(10),
-                           fg=C["sidebar_text"], bg=C["sidebar"], padx=18, pady=9, cursor="hand2")
-        signout.pack(fill="x")
-        signout.bind("<Button-1>", lambda e: self.logout())
-        who = tk.Frame(self.sidebar_footer, bg=C["sidebar_active"])
-        who.pack(fill="x", pady=(8, 0))
-        tk.Label(who, text="●", font=F(9), fg=C["income"], bg=C["sidebar_active"]).pack(side="left", padx=(14, 6), pady=10)
-        tk.Label(who, text=self.user["username"], font=F(10, "bold"), fg="#FFFFFF",
-                 bg=C["sidebar_active"]).pack(side="left")
 
         main = tk.Frame(self, bg=C["bg"])
         main.pack(side="left", fill="both", expand=True)
@@ -164,7 +125,6 @@ class App(tk.Tk):
         file_menu.add_command(label="Export all transactions…", accelerator="Ctrl+E",
                               command=lambda: self.pages["reports"].export_all())
         file_menu.add_separator()
-        file_menu.add_command(label=f"Sign out ({self.user['username']})", command=self.logout)
         file_menu.add_command(label="Exit", accelerator="Ctrl+Q", command=self.on_close)
         bar.add_cascade(label="File", menu=file_menu)
 
@@ -186,17 +146,13 @@ class App(tk.Tk):
         self.config(menu=bar)
 
     def bind_shortcuts(self):
-        """Shortcuts only act while someone is signed in (the login screen has no pages)."""
-        def when_signed_in(action):
-            return lambda e: action() if self.user else None
-
-        self.bind_all("<Control-n>", when_signed_in(self.new_transaction))
-        self.bind_all("<Control-e>", when_signed_in(lambda: self.pages["reports"].export_all()))
-        self.bind_all("<Control-t>", when_signed_in(self.toggle_theme))
+        self.bind_all("<Control-n>", lambda e: self.new_transaction())
+        self.bind_all("<Control-e>", lambda e: self.pages["reports"].export_all())
+        self.bind_all("<Control-t>", lambda e: self.toggle_theme())
         self.bind_all("<Control-q>", lambda e: self.on_close())
-        self.bind_all("<F5>", when_signed_in(self.refresh))
+        self.bind_all("<F5>", lambda e: self.refresh())
         for i, (key, *_rest) in enumerate(REGISTRY, start=1):
-            self.bind_all(f"<Control-Key-{i}>", when_signed_in(lambda k=key: self.show(k)))
+            self.bind_all(f"<Control-Key-{i}>", lambda e, k=key: self.show(k))
 
     def new_transaction(self):
         self.show("transactions")
@@ -225,8 +181,7 @@ class App(tk.Tk):
 
     def about(self):
         messagebox.showinfo("About FinTrack", "Personal Finance & Budget Planner\n\nBuilt with Python and Tkinter.\n"
-                            "Accounts and data are stored locally in SQLite (finance.db).\n"
-                            "Passwords are salted and hashed, never stored as text.", parent=self)
+                            "Data is stored locally in SQLite (finance.db).", parent=self)
 
     def on_close(self):
         if messagebox.askokcancel("Quit", "Close the Personal Finance & Budget Planner?", parent=self):

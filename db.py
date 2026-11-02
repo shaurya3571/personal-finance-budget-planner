@@ -1,8 +1,4 @@
-"""SQLite persistence layer for the Personal Finance & Budget Planner.
-
-Every row of user data carries a `user_id`; all queries are filtered by `self.uid`
-(set with set_user() after login) so one account can never see or change another's data.
-"""
+"""SQLite persistence layer for the Personal Finance & Budget Planner."""
 import calendar
 import os
 import random
@@ -20,36 +16,21 @@ EXPENSE_CATEGORIES = [
 INCOME_CATEGORIES = ["Allowance", "Salary", "Business", "Freelance", "Investments", "Other"]
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    username  TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    pw_hash   TEXT NOT NULL,
-    created   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS login_attempts (
-    username      TEXT PRIMARY KEY,
-    failed        INTEGER NOT NULL DEFAULT 0,
-    locked_until  REAL NOT NULL DEFAULT 0
-);
 CREATE TABLE IF NOT EXISTS transactions (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id   INTEGER NOT NULL DEFAULT 0,
     kind      TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
     amount    REAL NOT NULL CHECK (amount > 0),
     category  TEXT NOT NULL,
     tx_date   TEXT NOT NULL,
     note      TEXT NOT NULL DEFAULT ''
 );
-CREATE INDEX IF NOT EXISTS idx_tx_user_date ON transactions(user_id, tx_date);
+CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(tx_date);
 CREATE TABLE IF NOT EXISTS budgets (
-    user_id       INTEGER NOT NULL DEFAULT 0,
-    category      TEXT NOT NULL,
-    monthly_limit REAL NOT NULL CHECK (monthly_limit > 0),
-    PRIMARY KEY (user_id, category)
+    category      TEXT PRIMARY KEY,
+    monthly_limit REAL NOT NULL CHECK (monthly_limit > 0)
 );
 CREATE TABLE IF NOT EXISTS goals (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id   INTEGER NOT NULL DEFAULT 0,
     name      TEXT NOT NULL,
     target    REAL NOT NULL CHECK (target > 0),
     saved     REAL NOT NULL DEFAULT 0,
@@ -63,92 +44,34 @@ class Database:
     def __init__(self, path: str = DB_PATH):
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
-        self.uid = 0                       # 0 = nobody logged in (also used by unit tests)
-        self._migrate()
         self.conn.executescript(SCHEMA)
-        self._finish_migration()
         self.conn.commit()
 
     def close(self):
         self.conn.close()
 
-    def set_user(self, uid: int):
-        self.uid = uid
-
-    # ---- upgrade databases created before user accounts existed ----------
-    def _columns(self, table):
-        return {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})")}
-
-    def _migrate(self):
-        for table in ("transactions", "goals"):
-            cols = self._columns(table)
-            if cols and "user_id" not in cols:
-                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
-        cols = self._columns("budgets")
-        if cols and "user_id" not in cols:
-            self.conn.execute("ALTER TABLE budgets RENAME TO budgets_legacy")
-
-    def _finish_migration(self):
-        if self._columns("budgets_legacy"):
-            self.conn.execute("INSERT OR IGNORE INTO budgets (user_id, category, monthly_limit) "
-                              "SELECT 0, category, monthly_limit FROM budgets_legacy")
-            self.conn.execute("DROP TABLE budgets_legacy")
-
-    # ---- users & login attempts -----------------------------------------
-    def create_user(self, username, pw_hash) -> int:
-        with self.conn:
-            cur = self.conn.execute("INSERT INTO users (username, pw_hash) VALUES (?, ?)", (username, pw_hash))
-        return cur.lastrowid
-
-    def get_user(self, username):
-        return self.conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-
-    def user_count(self) -> int:
-        return self.conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-
-    def adopt_legacy(self, uid):
-        """Give rows created before accounts existed (user_id 0) to the first registered user."""
-        with self.conn:
-            for table in ("transactions", "goals", "budgets"):
-                self.conn.execute(f"UPDATE {table} SET user_id = ? WHERE user_id = 0", (uid,))
-
-    def get_attempts(self, key):
-        row = self.conn.execute("SELECT failed, locked_until FROM login_attempts WHERE username = ?", (key,)).fetchone()
-        return (row["failed"], row["locked_until"]) if row else (0, 0.0)
-
-    def set_attempts(self, key, failed, locked_until):
-        with self.conn:
-            self.conn.execute(
-                "INSERT INTO login_attempts (username, failed, locked_until) VALUES (?, ?, ?) "
-                "ON CONFLICT(username) DO UPDATE SET failed=excluded.failed, locked_until=excluded.locked_until",
-                (key, failed, locked_until))
-
-    def clear_attempts(self, key):
-        with self.conn:
-            self.conn.execute("DELETE FROM login_attempts WHERE username = ?", (key,))
-
     # ---- transactions -------------------------------------------------
     def add_transaction(self, kind, amount, category, tx_date, note="") -> int:
         with self.conn:
             cur = self.conn.execute(
-                "INSERT INTO transactions (user_id, kind, amount, category, tx_date, note) VALUES (?,?,?,?,?,?)",
-                (self.uid, kind, amount, category, tx_date, note.strip()),
+                "INSERT INTO transactions (kind, amount, category, tx_date, note) VALUES (?,?,?,?,?)",
+                (kind, amount, category, tx_date, note.strip()),
             )
         return cur.lastrowid
 
     def update_transaction(self, tid, kind, amount, category, tx_date, note=""):
         with self.conn:
             self.conn.execute(
-                "UPDATE transactions SET kind=?, amount=?, category=?, tx_date=?, note=? WHERE id=? AND user_id=?",
-                (kind, amount, category, tx_date, note.strip(), tid, self.uid),
+                "UPDATE transactions SET kind=?, amount=?, category=?, tx_date=?, note=? WHERE id=?",
+                (kind, amount, category, tx_date, note.strip(), tid),
             )
 
     def delete_transaction(self, tid):
         with self.conn:
-            self.conn.execute("DELETE FROM transactions WHERE id=? AND user_id=?", (tid, self.uid))
+            self.conn.execute("DELETE FROM transactions WHERE id=?", (tid,))
 
     def get_transactions(self, month=None, kind=None, category=None, search=None, limit=None):
-        sql, args = "SELECT * FROM transactions WHERE user_id = ?", [self.uid]
+        sql, args = "SELECT * FROM transactions WHERE 1=1", []
         if month:
             sql += " AND substr(tx_date, 1, 7) = ?"
             args.append(month)
@@ -168,10 +91,10 @@ class Database:
 
     def totals(self, month=None):
         """Return (income, expense) for a month, or all time when month is None."""
-        sql = "SELECT kind, COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ?"
-        args = [self.uid]
+        sql = "SELECT kind, COALESCE(SUM(amount), 0) FROM transactions"
+        args = []
         if month:
-            sql += " AND substr(tx_date, 1, 7) = ?"
+            sql += " WHERE substr(tx_date, 1, 7) = ?"
             args.append(month)
         sql += " GROUP BY kind"
         sums = {k: v for k, v in self.conn.execute(sql, args)}
@@ -184,8 +107,8 @@ class Database:
     def spending_by_category(self, month):
         rows = self.conn.execute(
             "SELECT category, SUM(amount) AS total FROM transactions "
-            "WHERE user_id = ? AND kind='expense' AND substr(tx_date,1,7)=? GROUP BY category ORDER BY total DESC",
-            (self.uid, month),
+            "WHERE kind='expense' AND substr(tx_date,1,7)=? GROUP BY category ORDER BY total DESC",
+            (month,),
         ).fetchall()
         return [(r["category"], r["total"]) for r in rows]
 
@@ -195,8 +118,8 @@ class Database:
         data = {m: [0.0, 0.0] for m in months}
         rows = self.conn.execute(
             "SELECT substr(tx_date,1,7) AS ym, kind, SUM(amount) AS total FROM transactions "
-            "WHERE user_id = ? AND substr(tx_date,1,7) BETWEEN ? AND ? GROUP BY ym, kind",
-            (self.uid, months[0], months[-1]),
+            "WHERE substr(tx_date,1,7) BETWEEN ? AND ? GROUP BY ym, kind",
+            (months[0], months[-1]),
         )
         for r in rows:
             data[r["ym"]][0 if r["kind"] == "income" else 1] = r["total"]
@@ -206,38 +129,38 @@ class Database:
     def set_budget(self, category, limit):
         with self.conn:
             self.conn.execute(
-                "INSERT INTO budgets (user_id, category, monthly_limit) VALUES (?, ?, ?) "
-                "ON CONFLICT(user_id, category) DO UPDATE SET monthly_limit=excluded.monthly_limit",
-                (self.uid, category, limit),
+                "INSERT INTO budgets (category, monthly_limit) VALUES (?, ?) "
+                "ON CONFLICT(category) DO UPDATE SET monthly_limit=excluded.monthly_limit",
+                (category, limit),
             )
 
     def delete_budget(self, category):
         with self.conn:
-            self.conn.execute("DELETE FROM budgets WHERE user_id=? AND category=?", (self.uid, category))
+            self.conn.execute("DELETE FROM budgets WHERE category=?", (category,))
 
     def get_budgets(self) -> dict:
-        return {r["category"]: r["monthly_limit"] for r in self.conn.execute(
-            "SELECT category, monthly_limit FROM budgets WHERE user_id=? ORDER BY category", (self.uid,))}
+        return {r["category"]: r["monthly_limit"]
+                for r in self.conn.execute("SELECT * FROM budgets ORDER BY category")}
 
     # ---- goals --------------------------------------------------------
     def add_goal(self, name, target, saved=0.0, deadline=None) -> int:
         with self.conn:
             cur = self.conn.execute(
-                "INSERT INTO goals (user_id, name, target, saved, deadline) VALUES (?,?,?,?,?)",
-                (self.uid, name.strip(), target, saved, deadline or None),
+                "INSERT INTO goals (name, target, saved, deadline) VALUES (?,?,?,?)",
+                (name.strip(), target, saved, deadline or None),
             )
         return cur.lastrowid
 
     def list_goals(self):
-        return self.conn.execute("SELECT * FROM goals WHERE user_id=? ORDER BY id", (self.uid,)).fetchall()
+        return self.conn.execute("SELECT * FROM goals ORDER BY id").fetchall()
 
     def add_to_goal(self, gid, amount):
         with self.conn:
-            self.conn.execute("UPDATE goals SET saved = saved + ? WHERE id=? AND user_id=?", (amount, gid, self.uid))
+            self.conn.execute("UPDATE goals SET saved = saved + ? WHERE id=?", (amount, gid))
 
     def delete_goal(self, gid):
         with self.conn:
-            self.conn.execute("DELETE FROM goals WHERE id=? AND user_id=?", (gid, self.uid))
+            self.conn.execute("DELETE FROM goals WHERE id=?", (gid,))
 
     # ---- settings & housekeeping --------------------------------------
     def get_setting(self, key, default=None):
@@ -251,16 +174,15 @@ class Database:
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value)))
 
     def is_empty(self) -> bool:
-        return self.conn.execute("SELECT COUNT(*) FROM transactions WHERE user_id=?", (self.uid,)).fetchone()[0] == 0
+        return self.conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0] == 0
 
     def clear_all(self):
-        """Delete the current user's transactions, budgets and goals (other accounts are untouched)."""
         with self.conn:
             for table in ("transactions", "budgets", "goals"):
-                self.conn.execute(f"DELETE FROM {table} WHERE user_id=?", (self.uid,))
+                self.conn.execute(f"DELETE FROM {table}")
 
     def seed_demo(self, today: date | None = None):
-        """Fill the current user's account with believable sample data for the last 5 months."""
+        """Fill the database with believable sample data for the last 5 months."""
         today = today or date.today()
         rng = random.Random(7)
         this_month = today.strftime("%Y-%m")

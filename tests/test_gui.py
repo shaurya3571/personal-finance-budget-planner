@@ -27,14 +27,10 @@ class GuiTests(unittest.TestCase):
             setattr(messagebox, name, lambda *a, **k: None)
         for name in ("askyesno", "askokcancel"):
             setattr(messagebox, name, lambda *a, **k: True)
-        import auth
-        auth.ITERATIONS = 1000          # fast hashing for tests
         from app import App
         self.db = Database(os.path.join(tempfile.mkdtemp(), "test.db"))
-        self.user = auth.AuthService(self.db).register("tester", "Passw0rd1")
-        self.db.set_user(self.user["id"])
         self.db.seed_demo(date.today())
-        self.app = App(self.db, user=self.user)
+        self.app = App(self.db)
         self.app.update()
 
     def tearDown(self):
@@ -90,39 +86,6 @@ class GuiTests(unittest.TestCase):
         simpledialog.askstring = lambda *a, **k: "1500"
         goals.add_funds(gid)
         self.assertEqual(self.db.list_goals()[-1]["saved"], 1500)
-
-    def test_login_screen_flow_and_sign_out(self):
-        self.app.show_login()
-        self.app.update()
-        from login import LoginView
-        view = next(w for w in self.app.winfo_children() if isinstance(w, LoginView))
-        view.username.set("tester")
-        view.password.set("wrong-pass1")
-        view.submit()
-        self.assertIn("Incorrect username or password", view.error["text"])
-        self.assertIsNone(self.app.user)
-        view.password.set("Passw0rd1")
-        view.submit()
-        self.app.update()
-        self.assertEqual(self.app.user["username"], "tester")
-        self.assertEqual(self.app.current, "dashboard")
-        self.app.logout()                                 # askyesno patched to True
-        self.assertIsNone(self.app.user)
-        self.assertEqual(self.db.uid, 0)
-
-    def test_register_screen_creates_separate_empty_account(self):
-        self.app.show_login()
-        view = next(w for w in self.app.winfo_children() if w.__class__.__name__ == "LoginView")
-        view._set_mode("register")
-        view.username.set("newbie")
-        view.password.set("Passw0rd1")
-        view.confirm.set("Passw0rd1")
-        view.submit()
-        self.app.update()
-        self.assertEqual(self.app.user["username"], "newbie")
-        self.assertTrue(self.db.is_empty())               # does not see tester's demo data
-        self.app.show("dashboard")
-        self.app.update()
 
     def test_empty_database_renders(self):
         self.db.clear_all()
