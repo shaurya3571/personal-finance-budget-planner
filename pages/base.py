@@ -18,7 +18,8 @@ class Page(tk.Frame):
         text = tk.Frame(self.header, bg=C["bg"])
         text.pack(side="left")
         label(text, self.title, 20, "bold").pack(anchor="w")
-        label(text, self.subtitle, 10, color=C["muted"]).pack(anchor="w")
+        if self.subtitle:
+            label(text, self.subtitle, 10, color=C["muted"]).pack(anchor="w")
         self.actions = tk.Frame(self.header, bg=C["bg"])
         self.actions.pack(side="right")
         self.body = tk.Frame(self, bg=C["bg"])

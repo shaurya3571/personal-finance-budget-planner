@@ -47,16 +47,10 @@ class App(tk.Tk):
         sidebar = tk.Frame(self, bg=C["sidebar"], width=232)
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
-        brand = tk.Frame(sidebar, bg=C["sidebar"])
-        brand.pack(fill="x", padx=22, pady=(26, 28))
-        tk.Label(brand, text="◆", font=F(18, "bold"), fg=C["primary"], bg=C["sidebar"]).pack(side="left")
-        names = tk.Frame(brand, bg=C["sidebar"])
-        names.pack(side="left", padx=10)
-        tk.Label(names, text="FinTrack", font=F(14, "bold"), fg="#FFFFFF", bg=C["sidebar"]).pack(anchor="w")
-        tk.Label(names, text="Budget Planner", font=F(8), fg=C["sidebar_text"], bg=C["sidebar"]).pack(anchor="w")
+        tk.Frame(sidebar, bg=C["sidebar"], height=36).pack()
 
-        for key, text, icon, _ in REGISTRY:
-            item = tk.Label(sidebar, text=f"  {icon}   {text}", anchor="w", font=F(11),
+        for key, text, _ in REGISTRY:
+            item = tk.Label(sidebar, text=text, anchor="w", font=F(11),
                             fg=C["sidebar_text"], bg=C["sidebar"], padx=18, pady=11, cursor="hand2")
             item.pack(fill="x", padx=12, pady=2)
             item.bind("<Button-1>", lambda e, k=key: self.show(k))
@@ -66,7 +60,7 @@ class App(tk.Tk):
         self.sidebar_footer = tk.Frame(sidebar, bg=C["sidebar"])
         self.sidebar_footer.pack(side="bottom", fill="x", padx=12, pady=16)
         dark = theme.mode == "dark"
-        toggle = tk.Label(self.sidebar_footer, text="☀  Light mode" if dark else "☾  Dark mode", anchor="w",
+        toggle = tk.Label(self.sidebar_footer, text="Light mode" if dark else "Dark mode", anchor="w",
                           font=F(10), fg=C["sidebar_text"], bg=C["sidebar"], padx=18, pady=9, cursor="hand2")
         toggle.pack(fill="x")
         toggle.bind("<Button-1>", lambda e: self.toggle_theme())
@@ -75,7 +69,7 @@ class App(tk.Tk):
         main.pack(side="left", fill="both", expand=True)
         topbar = tk.Frame(main, bg=C["surface"], highlightthickness=1, highlightbackground=C["border"])
         topbar.pack(fill="x")
-        label(topbar, "Viewing month", 9, color=C["muted"]).pack(side="left", padx=(28, 10), pady=14)
+        tk.Frame(topbar, bg=C["surface"], width=20).pack(side="left", pady=14)
         for text, delta in (("‹", -1), ("›", 1)):
             b = tk.Label(topbar, text=text, font=F(14, "bold"), fg=C["text"], bg=C["surface"],
                          cursor="hand2", padx=8)
@@ -90,7 +84,7 @@ class App(tk.Tk):
 
         self.stack = tk.Frame(main, bg=C["bg"])
         self.stack.pack(fill="both", expand=True)
-        for key, _, _, page_cls in REGISTRY:
+        for key, _, page_cls in REGISTRY:
             page = page_cls(self.stack, self)
             page.place(relx=0, rely=0, relwidth=1, relheight=1)
             self.pages[key] = page
@@ -129,7 +123,7 @@ class App(tk.Tk):
         bar.add_cascade(label="File", menu=file_menu)
 
         view = tk.Menu(bar, tearoff=0)
-        for i, (key, text, _, _) in enumerate(REGISTRY, start=1):
+        for i, (key, text, _) in enumerate(REGISTRY, start=1):
             view.add_command(label=text, accelerator=f"Ctrl+{i}", command=lambda k=key: self.show(k))
         view.add_separator()
         view.add_command(label="Toggle dark mode", accelerator="Ctrl+T", command=self.toggle_theme)

@@ -13,7 +13,6 @@ ALL_CATEGORIES = sorted(set(EXPENSE_CATEGORIES + INCOME_CATEGORIES))
 
 class TransactionsPage(Page):
     title = "Transactions"
-    subtitle = "Record, search and edit every rupee"
 
     def build(self):
         self.editing_id = None
@@ -136,7 +135,7 @@ class TransactionsPage(Page):
             self.tree.insert("", "end", iid=str(r["id"]), tags=tags, values=(
                 r["tx_date"], r["kind"].title(), r["category"], r["note"],
                 f"{sign}{self.app.money(r['amount'], 2)}"))
-        self.summary.config(text=f"{len(rows)} transactions  ·  net {self.app.money(net)}")
+        self.summary.config(text=f"{len(rows)} transactions, net {self.app.money(net)}")
 
     # ---- actions -------------------------------------------------------
     def save(self):
@@ -151,10 +150,10 @@ class TransactionsPage(Page):
         args = (self.kind.get(), amount, self.category.get(), tx_date, self.note.get())
         if self.editing_id:
             self.db.update_transaction(self.editing_id, *args)
-            message = "Transaction updated ✓"
+            message = "Transaction updated"
         else:
             self.db.add_transaction(*args)
-            message = "Transaction added ✓"
+            message = "Transaction added"
         self.clear_form()
         self.status.config(text=message)
         self.after(2500, lambda: self.status.config(text=""))

@@ -12,7 +12,6 @@ STATUS = {"ok": ("On track", "income"), "warn": ("Close to limit", "warn"), "ove
 
 class BudgetsPage(Page):
     title = "Budgets"
-    subtitle = "Monthly spending limits per category"
 
     def build(self):
         body = self.body
@@ -33,7 +32,6 @@ class BudgetsPage(Page):
         form.grid(row=1, column=0, sticky="ns", padx=(0, 16))
         f = form.body
         label(f, "Set a budget", 13, "bold").pack(anchor="w", pady=(0, 6))
-        label(f, "Saving a category again updates its limit.", 9, color=C["muted"]).pack(anchor="w")
         self.category = tk.StringVar(value=EXPENSE_CATEGORIES[0])
         self.limit = tk.StringVar()
         label(f, "Category", 9, "bold", C["muted"]).pack(anchor="w", pady=(14, 3))
@@ -64,7 +62,7 @@ class BudgetsPage(Page):
         for w in inner.winfo_children():
             w.destroy()
         if not budgets:
-            label(inner, f"No budgets for {month_label(month)} yet.\nPick a category and set a limit on the left.",
+            label(inner, "No budgets set.",
                   11, color=C["muted"], justify="center").pack(pady=60)
             return
         ordered = sorted(budgets.items(), key=lambda kv: spent.get(kv[0], 0) / kv[1], reverse=True)

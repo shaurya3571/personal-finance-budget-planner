@@ -11,10 +11,9 @@ STATUS_COLOR = {"ok": "income", "warn": "warn", "over": "expense"}
 
 class DashboardPage(Page):
     title = "Dashboard"
-    subtitle = "Your money at a glance"
 
     def build(self):
-        ttk.Button(self.actions, text="+  Add transaction", style="Primary.TButton",
+        ttk.Button(self.actions, text="Add transaction", style="Primary.TButton",
                    command=lambda: self.app.show("transactions")).pack()
         body = self.body
         for col in range(4):
@@ -50,7 +49,7 @@ class DashboardPage(Page):
         head = tk.Frame(recent.body, bg=C["surface"])
         head.pack(fill="x")
         label(head, "Recent transactions", 12, "bold").pack(side="left")
-        link = label(head, "View all →", 9, "bold", C["primary"], cursor="hand2")
+        link = label(head, "View all", 9, "bold", C["primary"], cursor="hand2")
         link.pack(side="right")
         link.bind("<Button-1>", lambda e: self.app.show("transactions"))
         self.recent_list = tk.Frame(recent.body, bg=C["surface"])
@@ -61,7 +60,7 @@ class DashboardPage(Page):
         head = tk.Frame(budgets.body, bg=C["surface"])
         head.pack(fill="x")
         label(head, "Budget status", 12, "bold").pack(side="left")
-        link = label(head, "Manage →", 9, "bold", C["primary"], cursor="hand2")
+        link = label(head, "Manage", 9, "bold", C["primary"], cursor="hand2")
         link.pack(side="right")
         link.bind("<Button-1>", lambda e: self.app.show("budgets"))
         self.budget_list = tk.Frame(budgets.body, bg=C["surface"])
@@ -96,19 +95,16 @@ class DashboardPage(Page):
             w.destroy()
         rows = self.db.get_transactions(limit=3)
         if not rows:
-            label(self.recent_list, "No transactions yet. Add your first one!", 10, color=C["muted"]).pack(pady=20)
+            label(self.recent_list, "No transactions yet.", 10, color=C["muted"]).pack(pady=20)
         for r in rows:
             line = tk.Frame(self.recent_list, bg=C["surface"])
             line.pack(fill="x", pady=4)
             sign, color = ("+", C["income"]) if r["kind"] == "income" else ("-", C["expense"])
-            dot = tk.Canvas(line, width=34, height=34, bg=C["surface"], highlightthickness=0)
-            dot.create_oval(2, 2, 32, 32, fill=C["row_alt"], outline=C["border"])
-            dot.create_text(17, 17, text=r["category"][0], font=F(11, "bold"), fill=color)
-            dot.pack(side="left")
+            tk.Frame(line, bg=color, width=4, height=34).pack(side="left")
             info = tk.Frame(line, bg=C["surface"])
             info.pack(side="left", padx=10)
             label(info, r["note"] or r["category"], 10, "bold").pack(anchor="w")
-            label(info, f'{r["category"]}  ·  {r["tx_date"]}', 8, color=C["muted"]).pack(anchor="w")
+            label(info, f'{r["category"]}, {r["tx_date"]}', 8, color=C["muted"]).pack(anchor="w")
             label(line, f"{sign}{self.app.money(r['amount'])}", 11, "bold", color).pack(side="right")
 
     def _fill_budgets(self, spent_by_cat):
@@ -116,7 +112,7 @@ class DashboardPage(Page):
             w.destroy()
         budgets = self.db.get_budgets()
         if not budgets:
-            label(self.budget_list, "No budgets yet. Set limits in the Budgets tab.", 10, color=C["muted"]).pack(pady=20)
+            label(self.budget_list, "No budgets set.", 10, color=C["muted"]).pack(pady=20)
             return
         rows = sorted(((c, spent_by_cat.get(c, 0.0), lim) for c, lim in budgets.items()),
                       key=lambda t: t[1] / t[2], reverse=True)[:4]

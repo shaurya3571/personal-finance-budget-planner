@@ -12,7 +12,6 @@ from widgets import Card, label
 
 class ReportsPage(Page):
     title = "Reports"
-    subtitle = "Insights and exports for the selected month"
 
     def build(self):
         ttk.Button(self.actions, text="Export month (CSV)", style="Primary.TButton",
@@ -62,7 +61,7 @@ class ReportsPage(Page):
         if expenses:
             big = max(expenses, key=lambda r: r["amount"])
             self.insights["big"].config(text=self.app.money(big["amount"]))
-            self.insights["big_sub"].config(text=f'{big["note"] or big["category"]} · {big["tx_date"]}')
+            self.insights["big_sub"].config(text=f'{big["note"] or big["category"]}, {big["tx_date"]}')
         else:
             self.insights["big"].config(text="-")
             self.insights["big_sub"].config(text="No data")

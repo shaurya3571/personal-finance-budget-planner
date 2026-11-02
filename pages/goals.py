@@ -9,7 +9,6 @@ from widgets import Card, ProgressBar, ScrollFrame, label
 
 class GoalsPage(Page):
     title = "Savings goals"
-    subtitle = "Track what you are saving up for"
 
     def build(self):
         body = self.body
@@ -38,7 +37,7 @@ class GoalsPage(Page):
             w.destroy()
         goals = self.db.list_goals()
         if not goals:
-            label(inner, "No goals yet.\nCreate one on the left to start saving.", 11,
+            label(inner, "No goals yet.", 11,
                   color=C["muted"], justify="center").pack(pady=60)
             return
         for g in goals:
@@ -56,7 +55,7 @@ class GoalsPage(Page):
         label(top, g["name"], 12, "bold").pack(side="left")
         left = days_left(g["deadline"])
         if done:
-            note, color = "Goal reached ✓", C["income"]
+            note, color = "Goal reached", C["income"]
         elif left is None:
             note, color = "No deadline", C["muted"]
         elif left < 0:
@@ -79,7 +78,7 @@ class GoalsPage(Page):
 
         actions = tk.Frame(f, bg=C["surface"])
         actions.pack(fill="x", pady=(12, 0))
-        ttk.Button(actions, text="+ Add funds", style="Ghost.TButton",
+        ttk.Button(actions, text="Add funds", style="Ghost.TButton",
                    command=lambda gid=g["id"]: self.add_funds(gid)).pack(side="left")
         ttk.Button(actions, text="Delete", style="Danger.TButton",
                    command=lambda gid=g["id"], n=g["name"]: self.delete(gid, n)).pack(side="left", padx=8)
