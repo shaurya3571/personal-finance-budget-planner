@@ -6,7 +6,7 @@ from db import EXPENSE_CATEGORIES, INCOME_CATEGORIES
 from pages.base import Page
 from services import parse_amount, parse_date
 from theme import C, F
-from widgets import Card, label
+from widgets import heading, Card, label
 
 ALL_CATEGORIES = sorted(set(EXPENSE_CATEGORIES + INCOME_CATEGORIES))
 
@@ -27,7 +27,7 @@ class TransactionsPage(Page):
         card = Card(parent)
         card.grid(row=0, column=0, sticky="ns", padx=(0, 16))
         f = card.body
-        self.form_title = label(f, "New transaction", 13, "bold")
+        self.form_title = heading(f, "New transaction")
         self.form_title.pack(anchor="w", pady=(0, 12))
 
         self.kind = tk.StringVar(value="expense")

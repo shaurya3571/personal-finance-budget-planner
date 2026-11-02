@@ -7,7 +7,7 @@ import exporter
 from pages.base import Page
 from services import current_month, month_label, projected_spend
 from theme import C
-from widgets import Card, label
+from widgets import heading, Card, label
 
 
 class ReportsPage(Page):
@@ -31,14 +31,14 @@ class ReportsPage(Page):
             tile = tk.Frame(strip.body, bg=C["surface"])
             tile.pack(side="left", expand=True, fill="x")
             label(tile, title, 8, "bold", C["muted"]).pack(anchor="w")
-            self.insights[key] = label(tile, "-", 14, "bold")
+            self.insights[key] = label(tile, "-", 14, "bold", family="mono")
             self.insights[key].pack(anchor="w")
             self.insights[key + "_sub"] = label(tile, "", 9, color=C["muted"])
             self.insights[key + "_sub"].pack(anchor="w")
 
         table = Card(body, padding=16)
         table.grid(row=1, column=0, sticky="nsew")
-        label(table.body, "Category breakdown", 12, "bold").pack(anchor="w", pady=(0, 8))
+        heading(table.body, "Category breakdown").pack(anchor="w", pady=(0, 8))
         cols = ("category", "spent", "share", "budget", "remaining")
         self.tree = ttk.Treeview(table.body, columns=cols, show="headings", selectmode="none")
         for col, text, width, anchor in (("category", "Category", 200, "w"), ("spent", "Spent", 120, "e"),

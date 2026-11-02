@@ -7,9 +7,14 @@ from services import fmt_money, month_label
 from theme import C, F
 
 
-def label(parent, text="", size=10, weight="normal", color=None, bg=None, **kw):
-    return tk.Label(parent, text=text, font=F(size, weight), fg=color or C["text"],
+def label(parent, text="", size=10, weight="normal", color=None, bg=None, family="body", **kw):
+    return tk.Label(parent, text=text, font=theme.font(family, size, weight), fg=color or C["text"],
                     bg=bg or parent["bg"], **kw)
+
+
+def heading(parent, text, size=14, **kw):
+    """Card / section title in the display serif."""
+    return label(parent, text, size, "bold", family="display", **kw)
 
 
 class Card(tk.Frame):
@@ -27,7 +32,7 @@ class StatCard(Card):
         super().__init__(parent, padding=16)
         tk.Frame(self, bg=accent, height=3).place(x=0, y=0, relwidth=1)
         label(self.body, title.upper(), 8, "bold", C["muted"]).pack(anchor="w")
-        self.value = label(self.body, "-", 20, "bold")
+        self.value = label(self.body, "-", 20, "bold", family="mono")
         self.value.pack(anchor="w", pady=(4, 0))
         self.sub = label(self.body, "", 9, color=C["muted"])
         self.sub.pack(anchor="w")
@@ -90,7 +95,7 @@ class BarChart(tk.Canvas):
             y = top + plot_h * i / 4
             self.create_line(left, y, w - right, y, fill=C["border"])
             self.create_text(left - 8, y, text=fmt_money(top_value * (1 - i / 4)).replace("₹", ""),
-                             anchor="e", fill=C["muted"], font=F(8))
+                             anchor="e", fill=C["muted"], font=theme.FN(8))
         slot = (w - left - right) / len(self.data)
         bar_w = min(26, slot / 3)
         for idx, (ym, inc, exp) in enumerate(self.data):
@@ -141,7 +146,7 @@ class DonutChart(tk.Canvas):
                             outline=theme.CATEGORY_COLORS[i % len(theme.CATEGORY_COLORS)], width=thick)
             start += extent
         cx, cy = x0 + size / 2, y0 + size / 2
-        self.create_text(cx, cy - 8, text=fmt_money(total), fill=C["text"], font=F(14, "bold"))
+        self.create_text(cx, cy - 8, text=fmt_money(total), fill=C["text"], font=theme.FN(14, "bold"))
         self.create_text(cx, cy + 12, text=self.center_text, fill=C["muted"], font=F(8))
         lx, ly = x0 + size + 24, max(12, (h - min(len(self.items), 6) * 26) / 2)
         for i, (name, value) in enumerate(self.items[:6]):

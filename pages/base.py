@@ -17,7 +17,7 @@ class Page(tk.Frame):
         self.header.pack(fill="x", padx=28, pady=(24, 12))
         text = tk.Frame(self.header, bg=C["bg"])
         text.pack(side="left")
-        label(text, self.title, 20, "bold").pack(anchor="w")
+        label(text, self.title, 28, "bold", family="display").pack(anchor="w")
         if self.subtitle:
             label(text, self.subtitle, 10, color=C["muted"]).pack(anchor="w")
         self.actions = tk.Frame(self.header, bg=C["bg"])

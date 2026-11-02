@@ -4,7 +4,7 @@ from tkinter import ttk
 from pages.base import Page
 from services import budget_status, month_label, savings_rate, shift_month
 from theme import C, F
-from widgets import BarChart, Card, DonutChart, ProgressBar, StatCard, label
+from widgets import heading, BarChart, Card, DonutChart, ProgressBar, StatCard, label
 
 STATUS_COLOR = {"ok": "income", "warn": "warn", "over": "expense"}
 
@@ -31,14 +31,14 @@ class DashboardPage(Page):
 
         trend = Card(body)
         trend.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=(0, 8), pady=16)
-        label(trend.body, "Income vs expenses", 12, "bold").pack(anchor="w")
+        heading(trend.body, "Income vs expenses").pack(anchor="w")
         label(trend.body, "Last 6 months", 9, color=C["muted"]).pack(anchor="w", pady=(0, 6))
         self.bars = BarChart(trend.body)
         self.bars.pack(fill="both", expand=True)
 
         split = Card(body)
         split.grid(row=1, column=2, columnspan=2, sticky="nsew", padx=(8, 0), pady=16)
-        label(split.body, "Spending by category", 12, "bold").pack(anchor="w")
+        heading(split.body, "Spending by category").pack(anchor="w")
         self.split_sub = label(split.body, "", 9, color=C["muted"])
         self.split_sub.pack(anchor="w", pady=(0, 6))
         self.donut = DonutChart(split.body)
@@ -48,7 +48,7 @@ class DashboardPage(Page):
         recent.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=(0, 8))
         head = tk.Frame(recent.body, bg=C["surface"])
         head.pack(fill="x")
-        label(head, "Recent transactions", 12, "bold").pack(side="left")
+        heading(head, "Recent transactions").pack(side="left")
         link = label(head, "View all", 9, "bold", C["primary"], cursor="hand2")
         link.pack(side="right")
         link.bind("<Button-1>", lambda e: self.app.show("transactions"))
@@ -59,7 +59,7 @@ class DashboardPage(Page):
         budgets.grid(row=2, column=2, columnspan=2, sticky="nsew", padx=(8, 0))
         head = tk.Frame(budgets.body, bg=C["surface"])
         head.pack(fill="x")
-        label(head, "Budget status", 12, "bold").pack(side="left")
+        heading(head, "Budget status").pack(side="left")
         link = label(head, "Manage", 9, "bold", C["primary"], cursor="hand2")
         link.pack(side="right")
         link.bind("<Button-1>", lambda e: self.app.show("budgets"))

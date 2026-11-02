@@ -24,8 +24,16 @@ CATEGORY_COLORS = ["#6366F1", "#F59E0B", "#10B981", "#EC4899", "#06B6D4",
                    "#8B5CF6", "#EF4444", "#84CC16", "#F97316", "#64748B"]
 
 C: dict = {}
-_family = "TkDefaultFont"
 mode = "light"
+
+# Three typefaces: an editorial serif for headings, a clean sans for text, a monospace for figures.
+# Each list is tried in order, so the first installed font wins on macOS, Windows or Linux.
+FONT_CHOICES = {
+    "display": ["Georgia", "Palatino Linotype", "Palatino", "Cambria", "Noto Serif", "DejaVu Serif", "Times New Roman"],
+    "body": ["Avenir Next", "Segoe UI", "Helvetica Neue", "Inter", "Noto Sans", "DejaVu Sans", "Arial"],
+    "mono": ["SF Mono", "Menlo", "Consolas", "JetBrains Mono", "Noto Sans Mono", "DejaVu Sans Mono", "Courier New"],
+}
+_families = {role: "TkDefaultFont" for role in FONT_CHOICES}
 
 
 def set_mode(name: str):
@@ -36,16 +44,31 @@ def set_mode(name: str):
 
 
 def pick_font_family(root: tk.Misc):
-    global _family
     available = set(tkfont.families(root))
-    for name in ("Segoe UI", "Inter", "SF Pro Text", "Helvetica Neue", "Noto Sans", "DejaVu Sans", "Arial"):
-        if name in available:
-            _family = name
-            return
+    for role, names in FONT_CHOICES.items():
+        for name in names:
+            if name in available:
+                _families[role] = name
+                break
+
+
+def font(role: str, size: int = 10, weight: str = "normal"):
+    return (_families[role], size, weight)
 
 
 def F(size: int = 10, weight: str = "normal"):
-    return (_family, size, weight)
+    """Body text."""
+    return font("body", size, weight)
+
+
+def FH(size: int = 14, weight: str = "bold"):
+    """Headings (serif)."""
+    return font("display", size, weight)
+
+
+def FN(size: int = 10, weight: str = "normal"):
+    """Figures (monospace)."""
+    return font("mono", size, weight)
 
 
 def apply_style(root: tk.Tk):

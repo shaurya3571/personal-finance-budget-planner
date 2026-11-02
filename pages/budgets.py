@@ -5,7 +5,7 @@ from db import EXPENSE_CATEGORIES
 from pages.base import Page
 from services import budget_status, month_label, parse_amount
 from theme import C, F
-from widgets import Card, ProgressBar, ScrollFrame, label
+from widgets import heading, Card, ProgressBar, ScrollFrame, label
 
 STATUS = {"ok": ("On track", "income"), "warn": ("Close to limit", "warn"), "over": ("Over budget", "expense")}
 
@@ -25,13 +25,13 @@ class BudgetsPage(Page):
             tile = tk.Frame(self.summary.body, bg=C["surface"])
             tile.pack(side="left", expand=True, fill="x")
             label(tile, title, 8, "bold", C["muted"]).pack(anchor="w")
-            self.tiles[key] = label(tile, "-", 18, "bold")
+            self.tiles[key] = label(tile, "-", 18, "bold", family="mono")
             self.tiles[key].pack(anchor="w")
 
         form = Card(body)
         form.grid(row=1, column=0, sticky="ns", padx=(0, 16))
         f = form.body
-        label(f, "Set a budget", 13, "bold").pack(anchor="w", pady=(0, 6))
+        heading(f, "Set a budget").pack(anchor="w", pady=(0, 6))
         self.category = tk.StringVar(value=EXPENSE_CATEGORIES[0])
         self.limit = tk.StringVar()
         label(f, "Category", 9, "bold", C["muted"]).pack(anchor="w", pady=(14, 3))
@@ -77,7 +77,7 @@ class BudgetsPage(Page):
         f = card.body
         top = tk.Frame(f, bg=C["surface"])
         top.pack(fill="x")
-        label(top, cat, 11, "bold").pack(side="left")
+        heading(top, cat).pack(side="left")
         label(top, f"  {text}", 9, "bold", C[color_key]).pack(side="left")
         remove = label(top, "Remove", 9, "bold", C["muted"], cursor="hand2")
         remove.pack(side="right")

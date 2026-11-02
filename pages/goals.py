@@ -4,7 +4,7 @@ from tkinter import messagebox, simpledialog, ttk
 from pages.base import Page
 from services import days_left, parse_amount, parse_date
 from theme import C
-from widgets import Card, ProgressBar, ScrollFrame, label
+from widgets import heading, Card, ProgressBar, ScrollFrame, label
 
 
 class GoalsPage(Page):
@@ -18,7 +18,7 @@ class GoalsPage(Page):
         form = Card(body)
         form.grid(row=0, column=0, sticky="ns", padx=(0, 16))
         f = form.body
-        label(f, "New goal", 13, "bold").pack(anchor="w", pady=(0, 6))
+        heading(f, "New goal").pack(anchor="w", pady=(0, 6))
         self.vars = {k: tk.StringVar() for k in ("name", "target", "saved", "deadline")}
         for key, text in (("name", "Goal name"), ("target", "Target amount (₹)"),
                           ("saved", "Already saved (₹, optional)"), ("deadline", "Deadline (YYYY-MM-DD, optional)")):
@@ -52,7 +52,7 @@ class GoalsPage(Page):
         f = card.body
         top = tk.Frame(f, bg=C["surface"])
         top.pack(fill="x")
-        label(top, g["name"], 12, "bold").pack(side="left")
+        heading(top, g["name"]).pack(side="left")
         left = days_left(g["deadline"])
         if done:
             note, color = "Goal reached", C["income"]
