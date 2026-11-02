@@ -1,5 +1,6 @@
 """Main window: sidebar navigation, month selector and the page stack."""
 import tkinter as tk
+from tkinter import messagebox
 
 import theme
 from db import Database
@@ -16,11 +17,14 @@ class App(tk.Tk):
         theme.pick_font_family(self)
         theme.set_mode(self.db.get_setting("theme", "light"))
         self.title("Personal Finance & Budget Planner")
-        self.geometry("1240x800")
-        self.minsize(1080, 700)
+        self.geometry("1280x840")
+        self.minsize(1100, 760)
         self.month = current_month()
         self.pages, self.nav_items, self.current = {}, {}, None
         self.build_ui()
+        self.build_menu()
+        self.bind_shortcuts()
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.show(REGISTRY[0][0] if REGISTRY else None)
 
     # ---- helpers shared by pages --------------------------------------
@@ -61,6 +65,11 @@ class App(tk.Tk):
             self.nav_items[key] = item
         self.sidebar_footer = tk.Frame(sidebar, bg=C["sidebar"])
         self.sidebar_footer.pack(side="bottom", fill="x", padx=12, pady=16)
+        dark = theme.mode == "dark"
+        toggle = tk.Label(self.sidebar_footer, text="☀  Light mode" if dark else "☾  Dark mode", anchor="w",
+                          font=F(10), fg=C["sidebar_text"], bg=C["sidebar"], padx=18, pady=9, cursor="hand2")
+        toggle.pack(fill="x")
+        toggle.bind("<Button-1>", lambda e: self.toggle_theme())
 
         main = tk.Frame(self, bg=C["bg"])
         main.pack(side="left", fill="both", expand=True)
@@ -107,3 +116,74 @@ class App(tk.Tk):
     def refresh(self):
         if self.current:
             self.pages[self.current].refresh()
+
+    # ---- menu, shortcuts, theme, lifecycle ------------------------------
+    def build_menu(self):
+        bar = tk.Menu(self)
+        file_menu = tk.Menu(bar, tearoff=0)
+        file_menu.add_command(label="New transaction", accelerator="Ctrl+N", command=self.new_transaction)
+        file_menu.add_command(label="Export all transactions…", accelerator="Ctrl+E",
+                              command=lambda: self.pages["reports"].export_all())
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", accelerator="Ctrl+Q", command=self.on_close)
+        bar.add_cascade(label="File", menu=file_menu)
+
+        view = tk.Menu(bar, tearoff=0)
+        for i, (key, text, _, _) in enumerate(REGISTRY, start=1):
+            view.add_command(label=text, accelerator=f"Ctrl+{i}", command=lambda k=key: self.show(k))
+        view.add_separator()
+        view.add_command(label="Toggle dark mode", accelerator="Ctrl+T", command=self.toggle_theme)
+        bar.add_cascade(label="View", menu=view)
+
+        data = tk.Menu(bar, tearoff=0)
+        data.add_command(label="Load demo data", command=self.load_demo)
+        data.add_command(label="Delete all data…", command=self.clear_data)
+        bar.add_cascade(label="Data", menu=data)
+
+        help_menu = tk.Menu(bar, tearoff=0)
+        help_menu.add_command(label="About", command=self.about)
+        bar.add_cascade(label="Help", menu=help_menu)
+        self.config(menu=bar)
+
+    def bind_shortcuts(self):
+        self.bind_all("<Control-n>", lambda e: self.new_transaction())
+        self.bind_all("<Control-e>", lambda e: self.pages["reports"].export_all())
+        self.bind_all("<Control-t>", lambda e: self.toggle_theme())
+        self.bind_all("<Control-q>", lambda e: self.on_close())
+        self.bind_all("<F5>", lambda e: self.refresh())
+        for i, (key, *_rest) in enumerate(REGISTRY, start=1):
+            self.bind_all(f"<Control-Key-{i}>", lambda e, k=key: self.show(k))
+
+    def new_transaction(self):
+        self.show("transactions")
+        self.pages["transactions"].focus_new()
+
+    def toggle_theme(self):
+        new_mode = "light" if theme.mode == "dark" else "dark"
+        self.db.set_setting("theme", new_mode)
+        theme.set_mode(new_mode)
+        current = self.current
+        self.build_ui()
+        self.show(current)
+
+    def load_demo(self):
+        if not self.db.is_empty() and not messagebox.askyesno(
+                "Load demo data", "Demo data will be added to your existing records. Continue?", parent=self):
+            return
+        self.db.seed_demo()
+        self.refresh()
+
+    def clear_data(self):
+        if messagebox.askyesno("Delete all data", "This permanently deletes every transaction, budget and goal.\n\n"
+                               "Do you want to continue?", icon="warning", parent=self):
+            self.db.clear_all()
+            self.refresh()
+
+    def about(self):
+        messagebox.showinfo("About FinTrack", "Personal Finance & Budget Planner\n\nBuilt with Python and Tkinter.\n"
+                            "Data is stored locally in SQLite (finance.db).", parent=self)
+
+    def on_close(self):
+        if messagebox.askokcancel("Quit", "Close the Personal Finance & Budget Planner?", parent=self):
+            self.db.close()
+            self.destroy()

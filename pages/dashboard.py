@@ -94,7 +94,7 @@ class DashboardPage(Page):
     def _fill_recent(self):
         for w in self.recent_list.winfo_children():
             w.destroy()
-        rows = self.db.get_transactions(limit=4)
+        rows = self.db.get_transactions(limit=3)
         if not rows:
             label(self.recent_list, "No transactions yet. Add your first one!", 10, color=C["muted"]).pack(pady=20)
         for r in rows:
