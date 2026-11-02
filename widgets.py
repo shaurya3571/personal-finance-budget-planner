@@ -1,9 +1,10 @@
 """Reusable custom widgets: cards, stat tiles, progress bars and canvas-drawn charts."""
+import calendar
 import math
 import tkinter as tk
 
 import theme
-from services import fmt_money, month_label
+from services import compact_money, fmt_money, month_label
 from theme import C, F
 
 
@@ -184,3 +185,183 @@ class ScrollFrame(tk.Frame):
     def _unbind_wheel(self):
         for seq in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
             self.canvas.unbind_all(seq)
+
+
+def _nice_top(peak):
+    peak = max(peak, 1)
+    step = 10 ** math.floor(math.log10(peak))
+    return math.ceil(peak / step) * step
+
+
+class LineChart(tk.Canvas):
+    """Several lines over a shared x axis (values may be None where a series has ended)."""
+
+    def __init__(self, parent, height=200):
+        super().__init__(parent, height=height, bg=C["surface"], highlightthickness=0)
+        self.series, self.count = [], 0
+        self.bind("<Configure>", lambda e: self._draw())
+
+    def set(self, series, count):
+        self.series, self.count = series, count
+        self._draw()
+
+    def _draw(self):
+        self.delete("all")
+        w, h = self.winfo_width(), self.winfo_height()
+        if w < 80 or self.count < 2:
+            return
+        left, right, top, bottom = 58, 16, 12, 38
+        values = [v for _, _, vals in self.series for v in vals if v is not None]
+        top_value = _nice_top(max(values, default=1000))
+        plot_h = h - top - bottom
+        x = lambda i: left + (w - left - right) * i / (self.count - 1)
+        y = lambda v: top + plot_h * (1 - v / top_value)
+        for i in range(5):
+            gy = top + plot_h * i / 4
+            self.create_line(left, gy, w - right, gy, fill=C["border"])
+            self.create_text(left - 8, gy, text=compact_money(top_value * (1 - i / 4)), anchor="e",
+                             fill=C["muted"], font=theme.FN(8))
+        for i in range(self.count):
+            if i == 0 or (i + 1) % 5 == 0:
+                self.create_text(x(i), h - bottom + 14, text=str(i + 1), fill=C["muted"], font=theme.FN(8))
+        lx = left
+        for name, color, vals in self.series:
+            pts = [(x(i), y(v)) for i, v in enumerate(vals) if v is not None]
+            if len(pts) >= 2:
+                self.create_line(*[c for p in pts for c in p], fill=color, width=2.5, capstyle="round", joinstyle="round")
+            if pts:
+                px, py = pts[-1]
+                self.create_oval(px - 4, py - 4, px + 4, py + 4, fill=color, outline=C["surface"], width=2)
+            self.create_line(lx, h - 9, lx + 16, h - 9, fill=color, width=3)
+            self.create_text(lx + 22, h - 9, text=name, anchor="w", fill=C["muted"], font=F(9))
+            lx += 40 + 7 * len(name)
+
+
+class ColumnChart(tk.Canvas):
+    """Single-series columns; handles negative values and per-bar colours."""
+
+    def __init__(self, parent, height=200):
+        super().__init__(parent, height=height, bg=C["surface"], highlightthickness=0)
+        self.data, self.color_of = [], None
+        self.bind("<Configure>", lambda e: self._draw())
+
+    def set(self, data, color_of=None):
+        self.data, self.color_of = data, color_of or (lambda i, v: C["primary"])
+        self._draw()
+
+    def _draw(self):
+        self.delete("all")
+        w, h = self.winfo_width(), self.winfo_height()
+        if w < 60 or not self.data:
+            return
+        left, right, top, bottom = 10, 10, 20, 26
+        hi = max(max(v for _, v in self.data), 0)
+        lo = min(min(v for _, v in self.data), 0)
+        scale = (h - top - bottom) / (hi - lo if hi - lo else 1)
+        zero_y = top + hi * scale
+        slot = (w - left - right) / len(self.data)
+        bw = min(34, slot * 0.6)
+        self.create_line(left, zero_y, w - right, zero_y, fill=C["border"])
+        for i, (name, v) in enumerate(self.data):
+            cx = left + slot * (i + 0.5)
+            y1 = zero_y - v * scale
+            if abs(v * scale) >= 1:
+                self.create_rectangle(cx - bw / 2, min(y1, zero_y), cx + bw / 2, max(y1, zero_y),
+                                      fill=self.color_of(i, v), outline="")
+            ty = y1 - 9 if v >= 0 else y1 + 9
+            if v:
+                self.create_text(cx, ty, text=compact_money(v), fill=C["muted"], font=theme.FN(8))
+            self.create_text(cx, h - bottom + 14, text=name, fill=C["muted"], font=F(9))
+
+
+class HBarChart(tk.Canvas):
+    """Ranked horizontal bars with the value at the end of each bar."""
+
+    def __init__(self, parent, height=200):
+        super().__init__(parent, height=height, bg=C["surface"], highlightthickness=0)
+        self.items = []
+        self.bind("<Configure>", lambda e: self._draw())
+
+    def set(self, items):
+        self.items = items
+        self._draw()
+
+    def _draw(self):
+        self.delete("all")
+        w, h = self.winfo_width(), self.winfo_height()
+        if w < 80:
+            return
+        if not self.items:
+            self.create_text(w / 2, h / 2, text="No spending this month", fill=C["muted"], font=F(10))
+            return
+        peak = max(v for _, v in self.items)
+        row_h = min(34, (h - 8) / len(self.items))
+        name_w, val_w = 118, 64
+        for i, (name, v) in enumerate(self.items):
+            y = 4 + i * row_h + row_h / 2
+            self.create_text(0, y, text=name, anchor="w", fill=C["text"], font=F(9))
+            bar_w = max((w - name_w - val_w) * v / peak, 2)
+            self.create_rectangle(name_w, y - 7, name_w + bar_w, y + 7, outline="",
+                                  fill=theme.CATEGORY_COLORS[i % len(theme.CATEGORY_COLORS)])
+            self.create_text(name_w + bar_w + 8, y, text=compact_money(v), anchor="w", fill=C["muted"], font=theme.FN(9))
+
+
+class CalendarHeatmap(tk.Canvas):
+    """One square per day of a month, darker = more spent."""
+
+    def __init__(self, parent, height=220):
+        super().__init__(parent, height=height, bg=C["surface"], highlightthickness=0)
+        self.ym, self.values = None, []
+        self.bind("<Configure>", lambda e: self._draw())
+
+    def set(self, ym, values):
+        self.ym, self.values = ym, values
+        self._draw()
+
+    def _draw(self):
+        self.delete("all")
+        w, h = self.winfo_width(), self.winfo_height()
+        if w < 100 or not self.ym:
+            return
+        first = calendar.monthrange(int(self.ym[:4]), int(self.ym[5:7]))[0]   # Monday = 0
+        rows = math.ceil((first + len(self.values)) / 7)
+        cell = min((w - 8) / 7, (h - 44) / rows)
+        gap = 4
+        ox = (w - cell * 7) / 2
+        peak = max(self.values, default=0) or 1
+        for d, name in enumerate("MTWTFSS"):
+            self.create_text(ox + cell * (d + 0.5), 8, text=name, fill=C["muted"], font=F(8, "bold"))
+        for i, v in enumerate(self.values):
+            col, row = (first + i) % 7, (first + i) // 7
+            x0, y0 = ox + col * cell + gap / 2, 20 + row * cell + gap / 2
+            t = v / peak
+            fill = theme.blend(C["row_alt"], C["primary"], 0.12 + 0.88 * t) if v else C["row_alt"]
+            self.create_rectangle(x0, y0, x0 + cell - gap, y0 + cell - gap, fill=fill, outline=C["border"] if not v else "")
+            self.create_text(x0 + (cell - gap) / 2, y0 + (cell - gap) / 2, text=str(i + 1), font=theme.FN(8),
+                             fill=C["on_primary"] if t > 0.55 else C["muted"])
+        lx = ox
+        self.create_text(lx, h - 10, text="Less", anchor="w", fill=C["muted"], font=F(8))
+        for k in range(5):
+            self.create_rectangle(lx + 30 + k * 14, h - 16, lx + 40 + k * 14, h - 6, outline="",
+                                  fill=theme.blend(C["row_alt"], C["primary"], 0.12 + 0.88 * k / 4))
+        self.create_text(lx + 106, h - 10, text="More", anchor="w", fill=C["muted"], font=F(8))
+
+
+class RingGauge(tk.Canvas):
+    """Circular progress with a big percentage in the middle."""
+
+    def __init__(self, parent, caption, size=150):
+        super().__init__(parent, width=size, height=size + 22, bg=C["surface"], highlightthickness=0)
+        self.size, self.caption = size, caption
+        self.fraction, self.color = 0.0, C["primary"]
+
+    def set(self, fraction, color):
+        self.fraction, self.color = max(0.0, fraction), color
+        self.delete("all")
+        s, t = self.size, 14
+        box = (t / 2 + 2, t / 2 + 2, s - t / 2 - 2, s - t / 2 - 2)
+        self.create_arc(*box, start=90, extent=359.99, style="arc", outline=C["track"], width=t)
+        if self.fraction > 0:
+            self.create_arc(*box, start=90, extent=-min(self.fraction, 1) * 359.99, style="arc", outline=color, width=t)
+        self.create_text(s / 2, s / 2, text=f"{self.fraction * 100:.0f}%", fill=C["text"], font=theme.FN(20, "bold"))
+        self.create_text(s / 2, s + 10, text=self.caption, fill=C["muted"], font=F(9))

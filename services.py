@@ -96,3 +96,40 @@ def days_left(deadline: str | None, today: date | None = None) -> int | None:
     if not deadline:
         return None
     return (parse_date(deadline) - (today or date.today())).days
+
+
+def compact_money(value: float, symbol: str = "₹") -> str:
+    """Short label for chart axes: 950 -> ₹950, 12400 -> ₹12.4k, 250000 -> ₹2.5L."""
+    sign, v = ("-" if value < 0 else ""), abs(value)
+    if v >= 100_000:
+        return f"{sign}{symbol}{f'{v / 100_000:.1f}'.removesuffix('.0')}L"
+    if v >= 1_000:
+        return f"{sign}{symbol}{f'{v / 1_000:.1f}'.removesuffix('.0')}k"
+    return f"{sign}{symbol}{v:.0f}"
+
+
+def daily_expense_totals(rows, ym: str) -> list[float]:
+    """Expense per day of a month (index 0 = day 1)."""
+    out = [0.0] * calendar.monthrange(int(ym[:4]), int(ym[5:7]))[1]
+    for r in rows:
+        if r["kind"] == "expense" and r["tx_date"][:7] == ym:
+            out[int(r["tx_date"][8:10]) - 1] += r["amount"]
+    return out
+
+
+def cumulative(values, upto: int | None = None):
+    """Running total. Days after `upto` (1-based) become None so a line stops at today."""
+    total, out = 0.0, []
+    for day, v in enumerate(values, start=1):
+        total += v
+        out.append(total if upto is None or day <= upto else None)
+    return out
+
+
+def weekday_totals(rows, months) -> list[float]:
+    """Expense totals Monday..Sunday over the given set of 'YYYY-MM' months."""
+    out = [0.0] * 7
+    for r in rows:
+        if r["kind"] == "expense" and r["tx_date"][:7] in months:
+            out[date.fromisoformat(r["tx_date"]).weekday()] += r["amount"]
+    return out

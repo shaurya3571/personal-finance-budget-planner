@@ -42,6 +42,36 @@ class ServicesTests(unittest.TestCase):
         self.assertAlmostEqual(s.projected_spend(900, "2026-09", date(2026, 11, 10)), 900.0)
 
 
+class ChartDataTests(unittest.TestCase):
+    ROWS = [
+        {"kind": "expense", "amount": 100, "tx_date": "2026-11-02"},   # Monday
+        {"kind": "expense", "amount": 50, "tx_date": "2026-11-02"},
+        {"kind": "expense", "amount": 30, "tx_date": "2026-11-04"},    # Wednesday
+        {"kind": "income", "amount": 999, "tx_date": "2026-11-02"},    # ignored
+        {"kind": "expense", "amount": 70, "tx_date": "2026-10-31"},    # other month
+    ]
+
+    def test_daily_totals_and_cumulative(self):
+        days = s.daily_expense_totals(self.ROWS, "2026-11")
+        self.assertEqual(len(days), 30)
+        self.assertEqual((days[1], days[3], days[0]), (150, 30, 0))
+        run = s.cumulative(days, upto=4)
+        self.assertEqual(run[3], 180)
+        self.assertIsNone(run[4])                       # stops after "today"
+        self.assertEqual(s.cumulative([1, 2, 3])[-1], 6)
+
+    def test_weekday_totals(self):
+        totals = s.weekday_totals(self.ROWS, {"2026-11"})
+        self.assertEqual((totals[0], totals[2]), (150, 30))
+        self.assertEqual(sum(totals), 180)
+
+    def test_compact_money(self):
+        self.assertEqual(s.compact_money(950), "₹950")
+        self.assertEqual(s.compact_money(12400), "₹12.4k")
+        self.assertEqual(s.compact_money(250000), "₹2.5L")
+        self.assertEqual(s.compact_money(-1500), "-₹1.5k")
+
+
 class DatabaseTests(unittest.TestCase):
     def setUp(self):
         self.db = Database(":memory:")

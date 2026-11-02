@@ -43,6 +43,13 @@ def set_mode(name: str):
     C.update(PALETTES[mode])
 
 
+def blend(c1: str, c2: str, t: float) -> str:
+    """Mix two #RRGGBB colours; t=0 gives c1, t=1 gives c2."""
+    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#%02x%02x%02x" % tuple(round(x + (y - x) * t) for x, y in zip(a, b))
+
+
 def pick_font_family(root: tk.Misc):
     available = set(tkfont.families(root))
     for role, names in FONT_CHOICES.items():
